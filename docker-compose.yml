@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:17
+    env_file:
+      - .env
+    ports:
+      - "15432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d billing"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  seeder:
+    build: .
+    command: R --file=seed-database.R
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  interactive:
+    build: .
+    stdin_open: true
+    tty: true
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
