@@ -80,7 +80,7 @@ facility_billing_config <- tibble(
       exclude_treatment_code_field = FALSE
     ),
     list(
-      onset_date_constraint = TRUE
+      date_constraint = TRUE
     )
   )
 ) |>

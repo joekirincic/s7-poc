@@ -58,7 +58,7 @@ NicheVendorBillingExport <- new_class(
     config = new_property(
       class = class_list,
       default = list(
-        onset_date_constraint = FALSE
+        date_constraint = FALSE
       )
     ),
     file_ext = new_property(
@@ -81,12 +81,14 @@ method(generate_billing_export, PopularVendorBillingExport) <- function(
   d <- x@data |>
     mutate(
       medical_code = if_else(
-        map_lgl(config, "exclude_medical_code_field"),
+        rep(x@config$exclude_medical_code_field, nrow(x@data)),
+        #map_lgl(config, "exclude_medical_code_field"),
         "",
         medical_code
       ),
       treatment_code = if_else(
-        map_lgl(config, "exclude_treatment_code_field"),
+        rep(x@config$exclude_treatment_code_field, nrow(x@data)),
+        #map_lgl(config, "exclude_treatment_code_field"),
         "",
         treatment_code
       )
@@ -115,40 +117,40 @@ method(generate_billing_export, NicheVendorBillingExport) <- function(
 
   d <- x@data |>
     mutate(
-      onset_date_constraint_violated_ind = map_lgl(
-        config,
-        "onset_date_constraint"
+      date_constraint_violated_ind = rep(
+        x@config$date_constraint,
+        nrow(x@data)
       ) &
         !(year(date_of_service) == CURRENT_YEAR)
     )
 
-  validate_onset_date <- function(d) {
+  validate_date <- function(d) {
     facility <- pluck(d, "facility", 1)
-    bad_rows <- filter(d, onset_date_constraint_violated_ind)
+    bad_rows <- filter(d, date_constraint_violated_ind)
     assertthat::validate_that(
       {
         nrow(bad_rows) == 0
       },
       msg = sprintf(
-        "Skipping facility %s: %i rows violate onset date constraint.",
+        "Skipping facility %s: %i rows violate date constraint.",
         facility,
         nrow(bad_rows)
       )
     )
   }
 
-  onset_date_check <- validate_onset_date(d)
+  date_check <- validate_date(d)
 
-  if (!isTRUE(onset_date_check)) {
-    message(onset_date_check)
-    x@errors <- d |> filter(onset_date_constraint_violated_ind)
+  if (!isTRUE(date_check)) {
+    message(date_check)
+    x@errors <- d |> filter(date_constraint_violated_ind)
     return(invisible(x))
   }
 
   write_csv(
     select(
       d,
-      -onset_date_constraint_violated_ind,
+      -date_constraint_violated_ind,
       -config,
       -billing_export_type
     ),
